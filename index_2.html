@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traffic & Channels SQL Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --text: #1a1a18;
+    --muted: #6b6b65;
+    --border: rgba(26,26,24,0.1);
+    --border-strong: rgba(26,26,24,0.2);
+    --accent: #1a1a18;
+    --green: #2d6a4f;
+    --green-light: #eaf4ee;
+    --red: #9b2335;
+    --red-light: #fdf0f1;
+    --blue: #1a4f8a;
+    --blue-light: #edf3fb;
+    --amber: #8a5c1a;
+    --purple: #5c3d8a;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(247,245,240,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+  }
+
+  .nav-brand {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 0;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .nav-links a:hover { color: var(--text); background: var(--border); }
+
+  /* HERO */
+  .hero {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 5rem 2rem 3.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--muted);
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--muted);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+  }
+
+  .hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    color: var(--muted);
+  }
+
+  /* MAIN */
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 6rem;
+  }
+
+  /* SECTION */
+  .section {
+    padding: 4rem 0 0;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* METRIC GRID */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 3rem;
+  }
+
+  .metric {
+    background: var(--surface);
+    padding: 1.5rem;
+  }
+
+  .metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .metric-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 2.2rem;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .metric-note {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* PARADOX BOX */
+  .paradox {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 600px) { .paradox { grid-template-columns: 1fr; } }
+
+  .paradox-side {
+    padding: 1.25rem;
+    border-radius: 8px;
+  }
+
+  .paradox-side.bounce { background: var(--red-light); }
+  .paradox-side.convert { background: var(--green-light); }
+
+  .paradox-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .paradox-side.bounce .paradox-eyebrow { color: var(--red); }
+  .paradox-side.convert .paradox-eyebrow { color: var(--green); }
+
+  .paradox-number {
+    font-family: 'Instrument Serif', serif;
+    font-size: 2.8rem;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .paradox-side.bounce .paradox-number { color: var(--red); }
+  .paradox-side.convert .paradox-number { color: var(--green); }
+
+  .paradox-text { font-size: 13px; color: var(--muted); }
+
+  /* CHARTS */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+  }
+
+  .chart-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .chart-wrap { position: relative; }
+
+  /* SQL */
+  .sql-block {
+    background: #1a1a18;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .sql-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sql-filename {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .sql-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+
+  .sql-badge.fix { background: rgba(45,106,79,0.3); color: #6fcf97; border: 1px solid rgba(45,106,79,0.5); }
+  .sql-badge.new { background: rgba(26,79,138,0.3); color: #90cdf4; border: 1px solid rgba(26,79,138,0.5); }
+
+  .sql-body {
+    padding: 1.25rem;
+    overflow-x: auto;
+  }
+
+  .sql-body code {
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #e2e8d0;
+    white-space: pre;
+    display: block;
+  }
+
+  .kw { color: #90cdf4; }
+  .fn { color: #9ae6b4; }
+  .str { color: #fbd38d; }
+  .cm { color: rgba(255,255,255,0.3); font-style: italic; }
+  .hi { background: rgba(251,211,61,0.15); border-radius: 2px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  footer p { font-size: 12px; color: var(--muted); }
+
+  .footer-links { display: flex; gap: 1rem; }
+  .footer-links a {
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    font-family: 'DM Mono', monospace;
+  }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">traffic-channels-sql-analytics</span>
+  <ul class="nav-links">
+    <li><a href="#findings">Findings</a></li>
+    <li><a href="#charts">Charts</a></li>
+    <li><a href="#sql">SQL</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">Big Data Group Project · 2025</div>
+  <h1>Traffic &amp; Channels<br><em>SQL Analytics</em></h1>
+  <p class="hero-desc">
+    Analysis of traffic channel performance using GA4 event-level data in BigQuery.
+    Built 5 views covering bounce rate, conversion, device segmentation, and temporal trends.
+  </p>
+  <div class="hero-tags">
+    <span class="tag">BigQuery</span>
+    <span class="tag">SQL</span>
+    <span class="tag">GA4</span>
+    <span class="tag">Google Merchandise Store</span>
+    <span class="tag">Web Analytics</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- FINDINGS -->
+  <section class="section" id="findings">
+    <div class="section-label">Key findings</div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Search bounce rate</div>
+        <div class="metric-value">25.7%</div>
+        <div class="metric-note">3× higher than Social (7.69%)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Search conversion</div>
+        <div class="metric-value">1.9%</div>
+        <div class="metric-note">5.5× higher than Social (0.35%)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Direct avg visits</div>
+        <div class="metric-value">1.32</div>
+        <div class="metric-note">lowest retention — not loyal</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Search avg visits</div>
+        <div class="metric-value">2.09</div>
+        <div class="metric-note">leads in loyalty + $236k revenue</div>
+      </div>
+    </div>
+
+    <div class="paradox">
+      <div>
+        <p style="font-size:14px; color:var(--muted); margin-bottom:1rem; line-height:1.6;">
+          <strong style="color:var(--text); font-weight:500;">The Search paradox.</strong>
+          Search has a higher bounce rate than Social — yet converts at 5.5× the rate.
+          Users arrive with purchase intent. They bounce if irrelevant, but buy when the product matches.
+          Social drives clicks without commitment.
+        </p>
+        <p style="font-size:14px; color:var(--muted); line-height:1.6;">
+          Direct traffic, assumed to signal brand loyalty, actually shows the
+          <em>lowest</em> return rate (1.32 visits). Email drives the longest sessions — avg 280s vs 59s for Social.
+        </p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <div class="paradox-side bounce">
+          <div class="paradox-eyebrow">Bounce rate · Search</div>
+          <div class="paradox-number">25.7%</div>
+          <div class="paradox-text">3× higher than Social</div>
+        </div>
+        <div class="paradox-side convert">
+          <div class="paradox-eyebrow">Conversion · Search</div>
+          <div class="paradox-number">1.9%</div>
+          <div class="paradox-text">5.5× higher than Social</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section class="section" id="charts">
+    <div class="section-label">Data visualisation</div>
+
+    <div class="chart-card">
+      <div class="chart-title">Bounce rate vs conversion rate by source category</div>
+      <div class="chart-subtitle">The Search paradox in numbers</div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#c0392b"></span>Bounce rate %</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#27ae60"></span>Conversion rate %</span>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="c1" role="img" aria-label="Bounce rate vs conversion: Search bounce 25.7% conversion 1.9%, Social bounce 7.69% conversion 0.35%">Search: bounce 25.7%, conversion 1.9%. Social: bounce 7.69%, conversion 0.35%.</canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Sessions by traffic source</div>
+      <div class="chart-subtitle">Email leads in volume, Organic smallest segment</div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#2c5f8a"></span>Total sessions (thousands)</span>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="c2" role="img" aria-label="Sessions by source: Email 306k, Adwords 204k, YouTube 68k, Facebook 68k, Organic 34k">Email 306k, Adwords 204k, YouTube 68k, Facebook 68k, Organic 34k.</canvas>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+      <div class="chart-card">
+        <div class="chart-title">Avg engagement by channel group</div>
+        <div class="chart-subtitle">seconds per session</div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="c3" role="img" aria-label="Engagement: Email 280s, Search 111s, Other 102s, Social 59s">Email 280s, Search 111s, Other 102s, Social 59s.</canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Avg visits by channel</div>
+        <div class="chart-subtitle">loyalty metric</div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="c4" role="img" aria-label="Avg visits: Search 2.09, Other 1.74, Social 1.39, Direct 1.32">Search 2.09, Other 1.74, Social 1.39, Direct 1.32.</canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SQL -->
+  <section class="section" id="sql">
+    <div class="section-label">SQL — selected queries</div>
+
+    <div class="sql-block">
+      <div class="sql-header">
+        <span class="sql-filename">01_table_base.sql</span>
+        <span class="sql-badge fix">fixed: ORDER BY in window fn</span>
+      </div>
+      <div class="sql-body"><code><span class="cm">-- Event-level → session-level transformation</span>
+<span class="cm">-- FIX: removed ARRAY_AGG OVER (ORDER BY) — not supported in BigQuery</span>
+<span class="cm">-- pageview_count via COUNT(DISTINCT CASE WHEN) in GROUP BY instead</span>
+
+<span class="kw">CREATE OR REPLACE VIEW</span> `web-analytics-494818.web_analitycs.table_base` <span class="kw">AS</span>
+
+<span class="kw">WITH</span> raw_events <span class="kw">AS</span> (
+  <span class="kw">SELECT</span>
+    user_pseudo_id,
+    <span class="fn">COALESCE</span>(
+      (<span class="kw">SELECT</span> ep.value.int_value <span class="kw">FROM</span> <span class="fn">UNNEST</span>(event_params) ep
+       <span class="kw">WHERE</span> ep.key = <span class="str">'ga_session_id'</span>), 0
+    )                              <span class="kw">AS</span> session_id,
+    event_name, event_timestamp, event_date,
+    <span class="fn">COALESCE</span>((<span class="kw">SELECT</span> ep.value.string_value <span class="kw">FROM</span> <span class="fn">UNNEST</span>(event_params) ep
+      <span class="kw">WHERE</span> ep.key = <span class="str">'source'</span>), <span class="str">'(direct)'</span>) <span class="kw">AS</span> traffic_source,
+    <span class="fn">COALESCE</span>((<span class="kw">SELECT</span> ep.value.string_value <span class="kw">FROM</span> <span class="fn">UNNEST</span>(event_params) ep
+      <span class="kw">WHERE</span> ep.key = <span class="str">'medium'</span>), <span class="str">'(none)'</span>)   <span class="kw">AS</span> traffic_medium,
+    <span class="fn">COALESCE</span>((<span class="kw">SELECT</span> ep.value.int_value <span class="kw">FROM</span> <span class="fn">UNNEST</span>(event_params) ep
+      <span class="kw">WHERE</span> ep.key = <span class="str">'engagement_time_msec'</span>), 0)
+      / 1000.0                     <span class="kw">AS</span> engagement_time_sec,
+    device.category                <span class="kw">AS</span> device_category
+  <span class="kw">FROM</span> `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+  <span class="kw">WHERE</span> _TABLE_SUFFIX <span class="kw">BETWEEN</span> <span class="str">'20201101'</span> <span class="kw">AND</span> <span class="str">'20210131'</span>
+)
+
+<span class="kw">SELECT</span>
+  user_pseudo_id, session_id,
+  traffic_source, traffic_medium,
+  device_category, event_date,
+  <span class="fn">COUNT</span>(<span class="kw">DISTINCT CASE WHEN</span> event_name = <span class="str">'page_view'</span>
+    <span class="kw">THEN</span> event_timestamp <span class="kw">END</span>) <span class="kw">AS</span> pageview_count,
+  <span class="fn">SUM</span>(engagement_time_sec)    <span class="kw">AS</span> engagement_time_sec,
+  <span class="fn">MAX</span>(<span class="kw">CASE WHEN</span> event_name = <span class="str">'purchase'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END</span>) <span class="kw">AS</span> purchase_done
+<span class="kw">FROM</span> raw_events
+<span class="kw">WHERE</span> session_id != 0
+<span class="kw">GROUP BY</span> user_pseudo_id, session_id,
+         traffic_source, traffic_medium,
+         device_category, event_date</code></div>
+    </div>
+
+    <div class="sql-block">
+      <div class="sql-header">
+        <span class="sql-filename">02_traffic_channels.sql</span>
+        <span class="sql-badge fix">unified channel grouping</span>
+      </div>
+      <div class="sql-body"><code><span class="cm">-- Bounce rate, conversion rate, revenue by source category</span>
+<span class="kw">WITH</span> channel_grouped <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> *,
+    <span class="kw">CASE</span>
+      <span class="kw">WHEN</span> traffic_source <span class="kw">IN</span> (<span class="str">'google'</span>,<span class="str">'bing'</span>,<span class="str">'yahoo'</span>)
+        <span class="kw">AND</span> traffic_medium = <span class="str">'cpc'</span>           <span class="kw">THEN</span> <span class="str">'Search'</span>
+      <span class="kw">WHEN</span> traffic_medium = <span class="str">'organic'</span>        <span class="kw">THEN</span> <span class="str">'Organic'</span>
+      <span class="kw">WHEN</span> traffic_source <span class="kw">LIKE</span> <span class="str">'%facebook%'</span>
+        <span class="kw">OR</span>  traffic_source <span class="kw">LIKE</span> <span class="str">'%youtube%'</span>  <span class="kw">THEN</span> <span class="str">'Social media'</span>
+      <span class="kw">WHEN</span> traffic_medium = <span class="str">'email'</span>          <span class="kw">THEN</span> <span class="str">'Email'</span>
+      <span class="kw">WHEN</span> traffic_source = <span class="str">'(direct)'</span>
+        <span class="kw">AND</span> traffic_medium = <span class="str">'(none)'</span>        <span class="kw">THEN</span> <span class="str">'Direct'</span>
+      <span class="kw">ELSE</span> <span class="str">'Other'</span>
+    <span class="kw">END</span> <span class="kw">AS</span> source_category
+  <span class="kw">FROM</span> `web-analytics-494818.web_analitycs.table_base`
+)
+<span class="kw">SELECT</span>
+  source_category,
+  <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> session_id)        <span class="kw">AS</span> total_sessions,
+  <span class="fn">ROUND</span>(100.0 * <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> pageview_count = 1
+    <span class="kw">AND</span> engagement_time_sec &lt; 10 <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END</span>)
+    / <span class="fn">COUNT</span>(*), 2)                  <span class="kw">AS</span> bounce_rate_pct,
+  <span class="fn">ROUND</span>(100.0 * <span class="fn">SUM</span>(purchase_done)
+    / <span class="fn">COUNT</span>(*), 2)                  <span class="kw">AS</span> conversion_rate_pct
+<span class="kw">FROM</span> channel_grouped
+<span class="kw">GROUP BY</span> source_category
+<span class="kw">ORDER BY</span> total_sessions <span class="kw">DESC</span></code></div>
+    </div>
+
+    <div class="sql-block">
+      <div class="sql-header">
+        <span class="sql-filename">03_channel_device_breakdown.sql</span>
+        <span class="sql-badge new">new — per feedback</span>
+      </div>
+      <div class="sql-body"><code><span class="cm">-- Device × channel segmentation (missing from original submission)</span>
+<span class="kw">SELECT</span>
+  <span class="kw">CASE</span>
+    <span class="kw">WHEN</span> traffic_source <span class="kw">IN</span> (<span class="str">'google'</span>,<span class="str">'bing'</span>)
+      <span class="kw">AND</span> traffic_medium = <span class="str">'cpc'</span>        <span class="kw">THEN</span> <span class="str">'Search'</span>
+    <span class="kw">WHEN</span> traffic_source <span class="kw">LIKE</span> <span class="str">'%facebook%'</span>
+      <span class="kw">OR</span>  traffic_source <span class="kw">LIKE</span> <span class="str">'%youtube%'</span> <span class="kw">THEN</span> <span class="str">'Social'</span>
+    <span class="kw">WHEN</span> traffic_medium = <span class="str">'email'</span>         <span class="kw">THEN</span> <span class="str">'Email'</span>
+    <span class="kw">WHEN</span> traffic_source = <span class="str">'(direct)'</span>     <span class="kw">THEN</span> <span class="str">'Direct'</span>
+    <span class="kw">ELSE</span> <span class="str">'Other'</span>
+  <span class="kw">END</span>                                    <span class="kw">AS</span> source_category,
+  device_category,
+  <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> session_id)            <span class="kw">AS</span> sessions,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(engagement_time_sec), 1)    <span class="kw">AS</span> avg_engagement_sec,
+  <span class="fn">ROUND</span>(100.0 * <span class="fn">SUM</span>(purchase_done)
+    / <span class="fn">COUNT</span>(*), 2)                       <span class="kw">AS</span> conversion_pct
+<span class="kw">FROM</span> `web-analytics-494818.web_analitycs.table_base`
+<span class="kw">GROUP BY</span> source_category, device_category
+<span class="kw">ORDER BY</span> source_category, sessions <span class="kw">DESC</span></code></div>
+    </div>
+
+  </section>
+
+</div>
+
+<footer>
+  <p>Traffic &amp; Channels SQL Analytics · Big Data Group Project · 2025</p>
+  <div class="footer-links">
+    <a href="https://github.com" target="_blank">GitHub →</a>
+  </div>
+</footer>
+
+<script>
+const grid = '#e5e2da';
+const tick = '#9a9890';
+
+new Chart(document.getElementById('c1'), {
+  type: 'bar',
+  data: {
+    labels: ['Search', 'Social media', 'Other'],
+    datasets: [
+      { label: 'Bounce rate %', data: [25.74, 7.69, 36.82], backgroundColor: '#c0392b', borderWidth: 0 },
+      { label: 'Conversion rate %', data: [1.9, 0.35, 1.73], backgroundColor: '#27ae60', borderWidth: 0 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: grid }, ticks: { color: tick, callback: v => v + '%' } },
+      x: { grid: { display: false }, ticks: { color: tick } }
+    }
+  }
+});
+
+new Chart(document.getElementById('c2'), {
+  type: 'bar',
+  data: {
+    labels: ['Email', 'Adwords', 'YouTube', 'Facebook', 'Organic'],
+    datasets: [{ label: 'Sessions', data: [306.2, 204.5, 68.1, 67.8, 33.8], backgroundColor: '#2c5f8a', borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: grid }, ticks: { color: tick, callback: v => v + 'k' } },
+      x: { grid: { display: false }, ticks: { color: tick } }
+    }
+  }
+});
+
+new Chart(document.getElementById('c3'), {
+  type: 'bar',
+  data: {
+    labels: ['Email', 'Search', 'Other', 'Social'],
+    datasets: [{ label: 'Avg engagement (s)', data: [280, 111, 102, 59], backgroundColor: ['#2c5f8a','#2c5f8a','#2c5f8a','#c0392b'], borderWidth: 0 }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: grid }, ticks: { color: tick, callback: v => v + 's' } },
+      y: { grid: { display: false }, ticks: { color: tick } }
+    }
+  }
+});
+
+new Chart(document.getElementById('c4'), {
+  type: 'bar',
+  data: {
+    labels: ['Search', 'Other', 'Social', 'Direct'],
+    datasets: [{ label: 'Avg visits', data: [2.09, 1.74, 1.39, 1.32], backgroundColor: ['#27ae60','#8a7f6e','#8a7f6e','#c0392b'], borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: grid }, ticks: { color: tick }, min: 0, max: 2.5 },
+      x: { grid: { display: false }, ticks: { color: tick } }
+    }
+  }
+});
+</script>
+</body>
+</html>
